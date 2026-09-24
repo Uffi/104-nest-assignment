@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
-import { apiFetch } from '../api/http';
+import { apiFetch, clearAuth } from '../api/http';
 
 type EmployeeStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -62,12 +62,6 @@ const createForm = ref({
 function logout() {
   clearAuth();
   router.replace('/login');
-}
-
-function clearAuth() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('role');
 }
 
 async function fetchEmployees() {

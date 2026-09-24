@@ -165,6 +165,12 @@ Token 有效時間：
 }
 ```
 
+### Response
+
+成功後回傳更新完成的員工完整資料，格式同：
+
+`GET /employees/:employeeNo`
+
 ### 錯誤
 
 - `400 Bad Request`：Query Parameter 格式錯誤

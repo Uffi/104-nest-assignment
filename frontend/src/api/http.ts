@@ -1,6 +1,6 @@
-const API_URL = 'http://localhost:3000';
+export const API_URL = 'http://localhost:3000';
 
-function clearAuth() {
+export function clearAuth() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('role');
@@ -43,7 +43,6 @@ async function refreshAccessToken() {
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const request = () => {
     const accessToken = localStorage.getItem('accessToken');
-
     const headers = new Headers(options.headers);
 
     if (accessToken) {
@@ -72,6 +71,11 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   response = await request();
+
+  if (response.status === 401) {
+    clearAuth();
+    window.location.href = '/login';
+  }
 
   return response;
 }
