@@ -1,124 +1,514 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 104 Nest.js 員工資料管理作業
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+使用 Nest.js 實作員工資料管理、登入驗證與角色權限控制，並額外提供 Vue 3 前端與 Swagger，方便實際操作與驗證 API。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 技術
 
-## Description
+### Backend
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Nest.js
+- TypeScript
+- TypeORM
+- better-sqlite3
+- JWT
+- bcryptjs
+- class-validator
+- taiwan-id-validator
+- Swagger
+- Vitest
 
-## Project setup
+### Frontend
 
-```bash
-$ npm install
+- Vue 3
+- TypeScript
+- Vue Router
+- Element Plus
+- Vite
+
+## 專案結構
+
+```text
+src/
+├─ auth/
+│  ├─ decorators/
+│  ├─ dto/
+│  ├─ guards/
+│  ├─ auth.controller.ts
+│  ├─ auth.module.ts
+│  └─ auth.service.ts
+│
+├─ employees/
+│  ├─ dto/
+│  ├─ entities/
+│  ├─ employees.controller.ts
+│  ├─ employees.module.ts
+│  └─ employees.service.ts
+│
+├─ users/
+│  ├─ entities/
+│  ├─ enums/
+│  ├─ users.module.ts
+│  └─ users.service.ts
+│
+├─ common/
+│  └─ validators/
+│
+├─ app.module.ts
+└─ main.ts
+
+frontend/
+docs/
+test/
 ```
 
-## Compile and run the project
+## 架構與資料流程
 
-```bash
-# development
-$ npm run start
+主要 Request Flow：
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```text
+Vue Frontend
+    ↓
+HTTP API
+    ↓
+Controller
+    ↓
+AuthGuard / RolesGuard
+    ↓
+DTO Validation
+    ↓
+Service
+    ↓
+TypeORM Repository
+    ↓
+SQLite
 ```
 
-## Run tests
+### Module
 
-```bash
-# unit tests
-$ npm run test
+以功能為單位拆分：
 
-# e2e tests
-$ npm run test:e2e
+- `AuthModule`：登入、JWT、Refresh Token、權限驗證
+- `EmployeesModule`：員工查詢、新增、修改
+- `UsersModule`：登入帳號與角色資料
 
-# test coverage
-$ npm run test:cov
+只有跨功能共用的內容放在 `common`，例如台灣身分證驗證器。
+
+### Controller
+
+負責接收 HTTP Request、取得 Body / Query / Param，並將資料交給 Service。
+
+Controller 不處理主要商業邏輯。
+
+### DTO
+
+DTO（Data Transfer Object）用來描述 API 可以接收的資料格式。
+
+搭配 `class-validator` 進行欄位驗證，例如：
+
+- 必填欄位
+- Email 格式
+- 日期格式
+- Enum
+- Pagination 範圍
+- 台灣身分證格式
+
+### Service
+
+負責主要商業邏輯，例如：
+
+- 員工編號產生
+- 重複資料檢查
+- 搜尋條件
+- 分頁
+- 員工資料更新
+- 登入驗證
+- Token 產生
+
+### Repository
+
+透過 TypeORM Repository 存取 SQLite。
+
+Controller 不直接操作資料庫。
+
+## Employee 設計
+
+資料欄位：
+
+| 欄位         | 說明                             |
+| ------------ | -------------------------------- |
+| `id`         | DB internal primary key          |
+| `employeeNo` | 對外使用的員工編號，例如 `00001` |
+| `name`       | 姓名                             |
+| `nationalId` | 台灣身分證字號                   |
+| `email`      | Email                            |
+| `department` | 部門                             |
+| `jobTitle`   | 職稱                             |
+| `status`     | `ACTIVE` / `INACTIVE`            |
+| `hireDate`   | 到職日                           |
+| `createdAt`  | 建立時間                         |
+| `updatedAt`  | 更新時間                         |
+
+`id` 為資料庫內部識別值。
+
+API route 與前端操作使用 `employeeNo` 作為員工識別值。
+
+`employeeNo` 在建立資料取得 DB id 後產生，例如：
+
+```text
+1 → 00001
+2 → 00002
 ```
 
-## Deployment
+## 員工刪除策略
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+本專案不提供 DELETE API。
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+考量員工資料可能需要保留歷史與稽核紀錄，離職員工不直接刪除，而是將：
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```json
+{
+  "status": "INACTIVE"
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+作為停用狀態。
 
-## Observability
+## 搜尋
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+員工列表目前支援：
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+| 欄位         | 搜尋方式 |
+| ------------ | -------- |
+| `name`       | 模糊搜尋 |
+| `email`      | 模糊搜尋 |
+| `department` | 精確搜尋 |
+| `jobTitle`   | 模糊搜尋 |
+| `status`     | 精確搜尋 |
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+同時支援：
 
-To add it to this project:
-
-```bash
-$ npm install @nestjs/observe
+```text
+page
+pageSize
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+`pageSize` 最大為 100。
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+## Authentication
 
-## Resources
+登入 API：
 
-Check out a few resources that may come in handy when working with NestJS:
+```text
+POST /auth/login
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+登入成功後取得：
 
-## Support
+```text
+Access Token
+Refresh Token
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Token 有效時間：
 
-## Stay in touch
+```text
+Access Token  : 1 小時
+Refresh Token : 30 天
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Access Token 用於呼叫受保護 API。
 
-## License
+Access Token 過期時，可使用：
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```text
+POST /auth/refresh
+```
+
+取得新的 Access Token 與 Refresh Token。
+
+Vue 前端透過共用的 `apiFetch()` 處理 API Request。
+
+當 API 回傳 `401` 時，會嘗試使用 Refresh Token 更新 Token，再重新送出原本的 Request。
+
+若 Refresh Token 也失效，會清除登入資訊並回到登入頁。
+
+## Authorization
+
+系統提供兩種角色：
+
+| Role       | 查看列表 | 查看詳細資料 | 新增 | 修改 |
+| ---------- | -------- | ------------ | ---- | ---- |
+| `readonly` | ✅       | ✅           | ❌   | ❌   |
+| `admin`    | ✅       | ✅           | ✅   | ✅   |
+
+權限由 Nest.js Guard 控制：
+
+```text
+AuthGuard
+RolesGuard
+```
+
+前端依角色隱藏新增與修改按鈕只是 UX。
+
+真正的權限判斷仍由 Backend Guard 負責。
+
+## Demo 帳號
+
+預設會建立：
+
+```text
+Admin
+Email: admin@example.com
+Password: Admin123!
+
+Readonly
+Email: readonly@example.com
+Password: Readonly123!
+```
+
+密碼可以透過環境變數覆蓋。
+
+密碼存入資料庫前會使用 bcrypt hash。
+
+## Validation
+
+Global `ValidationPipe` 設定：
+
+```text
+whitelist: true
+forbidNonWhitelisted: true
+transform: true
+```
+
+主要驗證包含：
+
+- 姓名必填
+- 身分證字號必填
+- 台灣身分證格式與 checksum
+- National ID 不可重複
+- Email 格式
+- Email 不可重複
+- 到職日格式
+- Status Enum
+- Pagination 範圍
+- 未定義欄位禁止傳入
+
+## HTTP Status
+
+| Status | 說明                      |
+| ------ | ------------------------- |
+| `200`  | 查詢或修改成功            |
+| `201`  | 新增成功                  |
+| `400`  | Request / Validation 錯誤 |
+| `401`  | 未登入、Token 無效或過期  |
+| `403`  | 已登入但權限不足          |
+| `404`  | 找不到員工                |
+| `409`  | National ID / Email 重複  |
+
+## Swagger
+
+啟動 Backend 後：
+
+```text
+http://localhost:3000/api
+```
+
+Swagger 可以查看：
+
+- Endpoint
+- Request Body
+- Query Parameter
+- 必填 / 選填欄位
+- Enum
+- HTTP Status
+- Bearer Authentication
+
+也可以直接使用 `Try it out` 測試 API。
+
+詳細 API 規格：
+
+```text
+docs/API.md
+```
+
+## 環境變數
+
+先建立 `.env`：
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+環境變數範例請參考：
+
+```text
+.env.example
+```
+
+## 啟動 Backend
+
+專案根目錄：
+
+```bash
+npm install
+npm run start:dev
+```
+
+Backend：
+
+```text
+http://localhost:3000
+```
+
+Swagger：
+
+```text
+http://localhost:3000/api
+```
+
+## 啟動 Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend：
+
+```text
+http://localhost:5173
+```
+
+## 測試
+
+Backend Unit Test：
+
+```bash
+npm run test
+```
+
+目前：
+
+```text
+Test Files  2 passed
+Tests       12 passed
+```
+
+Backend Build：
+
+```bash
+npm run build
+```
+
+Frontend Build：
+
+```bash
+cd frontend
+npm run build
+```
+
+詳細測試項目：
+
+```text
+docs/TESTING.md
+```
+
+## 建議閱讀順序
+
+第一次閱讀專案可以依照：
+
+```text
+README.md
+↓
+docs/API.md
+↓
+src/app.module.ts
+↓
+src/employees/employees.controller.ts
+↓
+src/employees/dto/
+↓
+src/employees/employees.service.ts
+↓
+src/employees/entities/employee.entity.ts
+↓
+src/auth/
+↓
+test/
+↓
+frontend/
+```
+
+可以先從 Controller 了解提供哪些 API，再從 DTO 看資料格式與驗證，最後進入 Service 看商業邏輯。
+
+## 目前設計限制
+
+此專案以作業展示與功能驗證為目的。
+
+### Database
+
+目前使用：
+
+```text
+synchronize: true
+```
+
+方便本機快速建立 SQLite schema。
+
+正式環境應改用 Migration 管理資料庫版本。
+
+### Refresh Token
+
+目前 Refresh Token 採 Stateless JWT。
+
+尚未實作：
+
+```text
+Refresh Token 儲存
+Token rotation
+Token revoke
+登出後主動失效
+```
+
+正式環境可以將 Refresh Token hash 後保存於資料庫，並實作 rotation / revoke。
+
+### National ID
+
+本作業目前直接儲存 National ID。
+
+正式環境處理個人敏感資料時，應進一步考量：
+
+```text
+Encryption at rest
+Key management
+存取權限
+Audit log
+資料遮罩
+```
+
+### Employee Number
+
+目前使用 DB id 產生五碼 `employeeNo`。
+
+這種方式適合作業展示。
+
+正式系統若有跨系統、分散式建立資料或特定編碼規則，應改用獨立的員工編號產生策略。
+
+## Bonus
+
+本作業另外完成：
+
+- 可執行 Nest.js 專案
+- SQLite Database
+- Swagger
+- Unit Test
+- Vue 3 操作介面
+- Access Token / Refresh Token
+- 前端自動 Refresh Token 流程

@@ -13,40 +13,48 @@ async function refreshAccessToken() {
     return false;
   }
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      refreshToken,
-    }),
-  });
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refreshToken,
+      }),
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('role', data.user.role);
+
+    return true;
+  } catch {
     return false;
   }
-
-  const data = await response.json();
-
-  localStorage.setItem('accessToken', data.accessToken);
-  localStorage.setItem('refreshToken', data.refreshToken);
-  localStorage.setItem('role', data.user.role);
-
-  return true;
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const accessToken = localStorage.getItem('accessToken');
+  const request = () => {
+    const accessToken = localStorage.getItem('accessToken');
 
-  const request = () =>
-    fetch(`${API_URL}${path}`, {
+    const headers = new Headers(options.headers);
+
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+
+    return fetch(`${API_URL}${path}`, {
       ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-      },
+      headers,
     });
+  };
 
   let response = await request();
 

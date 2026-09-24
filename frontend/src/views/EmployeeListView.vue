@@ -64,38 +64,13 @@ function logout() {
   router.replace('/login');
 }
 
-function getAccessToken() {
-  return localStorage.getItem('accessToken');
-}
-
 function clearAuth() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('role');
 }
 
-async function handleUnauthorized(response: Response) {
-  if (response.status !== 401) {
-    return false;
-  }
-
-  clearAuth();
-
-  ElMessage.warning('登入狀態已失效，請重新登入');
-  await router.replace('/login');
-
-  return true;
-}
-
 async function fetchEmployees() {
-  const accessToken = getAccessToken();
-
-  if (!accessToken) {
-    clearAuth();
-    await router.replace('/login');
-    return;
-  }
-
   loading.value = true;
 
   try {
@@ -125,10 +100,6 @@ async function fetchEmployees() {
     params.set('pageSize', String(pageSize.value));
 
     const response = await apiFetch(`/employees?${params.toString()}`);
-
-    if (await handleUnauthorized(response)) {
-      return;
-    }
 
     const result = await response.json();
 
@@ -180,6 +151,7 @@ function openCreateDialog() {
 function resetCreateForm() {
   createForm.value = {
     name: '',
+    nationalId: '',
     email: '',
     department: '',
     jobTitle: '',
@@ -189,14 +161,6 @@ function resetCreateForm() {
 }
 
 async function createEmployee() {
-  const accessToken = getAccessToken();
-
-  if (!accessToken) {
-    clearAuth();
-    await router.replace('/login');
-    return;
-  }
-
   if (
     !createForm.value.name.trim() ||
     !createForm.value.nationalId.trim() ||
@@ -236,10 +200,6 @@ async function createEmployee() {
       body: JSON.stringify(payload),
     });
 
-    if (await handleUnauthorized(response)) {
-      return;
-    }
-
     const result = await response.json();
 
     if (!response.ok) {
@@ -254,7 +214,6 @@ async function createEmployee() {
 
     dialogVisible.value = false;
     resetCreateForm();
-
     page.value = 1;
 
     await fetchEmployees();

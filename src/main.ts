@@ -1,5 +1,8 @@
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -17,6 +20,21 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Employee Management API')
+    .setDescription('Nest.js 員工資料管理 API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+  SwaggerModule.setup('api', app, document);
+
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT') ?? 3000;
+
+  await app.listen(port);
 }
-bootstrap();
+
+void bootstrap();
