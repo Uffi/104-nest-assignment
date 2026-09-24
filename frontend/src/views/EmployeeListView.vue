@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
+import { apiFetch } from '../api/http';
 
 type EmployeeStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -24,8 +25,6 @@ interface EmployeeListResponse {
     totalPages: number;
   };
 }
-
-const API_URL = 'http://localhost:3000';
 
 const router = useRouter();
 
@@ -125,11 +124,7 @@ async function fetchEmployees() {
     params.set('page', String(page.value));
     params.set('pageSize', String(pageSize.value));
 
-    const response = await fetch(`${API_URL}/employees?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await apiFetch(`/employees?${params.toString()}`);
 
     if (await handleUnauthorized(response)) {
       return;
@@ -233,11 +228,10 @@ async function createEmployee() {
       payload.jobTitle = createForm.value.jobTitle.trim();
     }
 
-    const response = await fetch(`${API_URL}/employees`, {
+    const response = await apiFetch('/employees', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
     });

@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
+import { apiFetch } from '../api/http';
 
 type EmployeeStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -17,8 +18,6 @@ interface EmployeeDetail {
   createdAt: string;
   updatedAt: string;
 }
-
-const API_URL = 'http://localhost:3000';
 
 const route = useRoute();
 const router = useRouter();
@@ -60,35 +59,24 @@ function openEdit() {
 async function updateEmployee() {
   if (!employee.value) return;
 
-  const accessToken = localStorage.getItem('accessToken');
-
-  if (!accessToken) {
-    await router.replace('/login');
-    return;
-  }
-
   updating.value = true;
 
   try {
-    const response = await fetch(
-      `${API_URL}/employees/${employee.value.employeeNo}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          name: editForm.value.name.trim(),
-          nationalId: editForm.value.nationalId.trim().toUpperCase(),
-          email: editForm.value.email.trim() || null,
-          department: editForm.value.department.trim() || null,
-          jobTitle: editForm.value.jobTitle.trim() || null,
-          status: editForm.value.status,
-          hireDate: editForm.value.hireDate,
-        }),
+    const response = await apiFetch(`/employees/${employee.value.employeeNo}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({
+        name: editForm.value.name.trim(),
+        nationalId: editForm.value.nationalId.trim().toUpperCase(),
+        email: editForm.value.email.trim() || null,
+        department: editForm.value.department.trim() || null,
+        jobTitle: editForm.value.jobTitle.trim() || null,
+        status: editForm.value.status,
+        hireDate: editForm.value.hireDate,
+      }),
+    });
 
     const result = await response.json();
 
@@ -112,22 +100,12 @@ async function updateEmployee() {
 }
 
 async function fetchEmployee() {
-  const accessToken = localStorage.getItem('accessToken');
   const employeeNo = route.params.employeeNo as string;
-
-  if (!accessToken) {
-    await router.replace('/login');
-    return;
-  }
 
   loading.value = true;
 
   try {
-    const response = await fetch(`${API_URL}/employees/${employeeNo}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await apiFetch(`/employees/${employeeNo}`);
 
     const result = await response.json();
 

@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import LoginView from '../views/LoginView.vue';
-import EmployeeListView from '../views/EmployeeListView.vue';
 import EmployeeDetailView from '../views/EmployeeDetailView.vue';
+import EmployeeListView from '../views/EmployeeListView.vue';
+import LoginView from '../views/LoginView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      redirect: '/employees',
     },
     {
       path: '/login',
@@ -30,6 +30,18 @@ const router = createRouter({
       },
     },
   ],
+});
+
+router.beforeEach((to) => {
+  const accessToken = localStorage.getItem('accessToken');
+
+  if (to.meta.requiresAuth && !accessToken) {
+    return '/login';
+  }
+
+  if (to.path === '/login' && accessToken) {
+    return '/employees';
+  }
 });
 
 export default router;
