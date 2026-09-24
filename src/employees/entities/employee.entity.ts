@@ -25,7 +25,7 @@ export class Employee {
   @Column({ type: 'varchar', unique: true, length: 20 })
   nationalId: string;
 
-  @Column({ type: 'varchar', nullable: true, length: 255 })
+  @Column({ type: 'varchar', nullable: true, unique: true, length: 255 })
   email: string | null;
 
   @Column({ type: 'varchar', nullable: true, length: 100 })

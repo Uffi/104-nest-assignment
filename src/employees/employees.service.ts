@@ -29,6 +29,18 @@ export class EmployeesService {
       throw new ConflictException('nationalId already exists');
     }
 
+    if (createEmployeeDto.email) {
+      const existingEmail = await this.employeeRepository.findOne({
+        where: {
+          email: createEmployeeDto.email,
+        },
+      });
+
+      if (existingEmail) {
+        throw new ConflictException('email already exists');
+      }
+    }
+
     const employee = this.employeeRepository.create({
       ...createEmployeeDto,
       employeeNo: null,
@@ -109,6 +121,18 @@ export class EmployeesService {
 
       if (existingEmployee) {
         throw new ConflictException('nationalId already exists');
+      }
+    }
+
+    if (updateEmployeeDto.email && updateEmployeeDto.email !== employee.email) {
+      const existingEmail = await this.employeeRepository.findOne({
+        where: {
+          email: updateEmployeeDto.email,
+        },
+      });
+
+      if (existingEmail) {
+        throw new ConflictException('email already exists');
       }
     }
 
